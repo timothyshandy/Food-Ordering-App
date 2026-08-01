@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: food-config
+  namespace: food-app
+
+data:
+  MYSQL_HOST: mysql-service
+  MYSQL_DATABASE: food_world

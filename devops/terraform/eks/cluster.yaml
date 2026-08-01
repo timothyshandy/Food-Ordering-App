@@ -1,0 +1,19 @@
+apiVersion: eksctl.io/v1alpha5
+
+kind: ClusterConfig
+
+metadata:
+  name: food-app-cluster
+  region: ap-south-1
+  version: "1.31"
+
+
+nodeGroups:
+
+  - name: worker-nodes
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 3
+
+    volumeSize: 40
