@@ -51,31 +51,23 @@ pipeline {
     steps {
         dir('backend/Online-food') {
             withSonarQubeEnv('SonarQube') {
-                sh '''
-                mvn sonar:sonar \
-                  -Dsonar.projectKey=food-app \
-                  -Dsonar.host.url=$SONAR_HOST_URL \
-                  -Dsonar.token=$SONAR_AUTH_TOKEN
-                '''
-            }
+    sh '''
+    mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar \
+      -Dsonar.projectKey=food-app
+    '''
+            }   
         }
     }
 }
 
 
-        stage('Quality Gate') {
-
-            steps {
-
-                timeout(time: 5, unit: 'MINUTES') {
-
-                    waitForQualityGate abortPipeline: true
-
-                }
-
-            }
-
+       stage('Quality Gate') {
+    steps {
+        timeout(time: 15, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
         }
+    }
+}
 
         stage('Build Frontend') {
 
