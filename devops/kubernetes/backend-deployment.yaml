@@ -25,7 +25,7 @@ spec:
 
       - name: backend
 
-        image: YOUR_ECR/backend:v1
+        image: whoistimothyshandy/food-backend:v1
 
         ports:
 
