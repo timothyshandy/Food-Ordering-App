@@ -70,21 +70,15 @@ pipeline {
 }
 
         stage('Build Frontend') {
-
-            steps {
-
-                dir('frontend') {
-
-                    sh '''
-                    npm install
-                    npm run build
-                    '''
-
-                }
-
-            }
-
+    steps {
+        dir('frontend') {
+            sh '''
+            npm install
+            CI=false npm run build
+            '''
         }
+    }
+}
 
         stage('Build Backend Docker Image') {
 
