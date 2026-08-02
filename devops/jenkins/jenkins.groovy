@@ -48,18 +48,19 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar \
-                          -Dsonar.projectKey=food-app \
-                          -Dsonar.host.url=$SONAR_HOST_URL \
-                          -Dsonar.token=$SONAR_AUTH_TOKEN \
-                          -B
-                    '''
-                }
+    steps {
+        dir('backend/Online-food') {
+            withSonarQubeEnv('SonarQube') {
+                sh '''
+                mvn sonar:sonar \
+                  -Dsonar.projectKey=food-app \
+                  -Dsonar.host.url=$SONAR_HOST_URL \
+                  -Dsonar.token=$SONAR_AUTH_TOKEN
+                '''
             }
         }
+    }
+}
 
 
         stage('Quality Gate') {
