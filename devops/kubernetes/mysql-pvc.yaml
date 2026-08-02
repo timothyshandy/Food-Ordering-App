@@ -6,12 +6,11 @@ metadata:
   namespace: food-app
 
 spec:
-
   accessModes:
+    - ReadWriteOnce
 
-  - ReadWriteOnce
+  storageClassName: gp2
 
   resources:
-
     requests:
       storage: 5Gi
