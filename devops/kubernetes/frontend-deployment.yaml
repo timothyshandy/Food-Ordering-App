@@ -25,7 +25,7 @@ spec:
 
       - name: frontend
 
-        image: whoistimothyshandy/food-frontend:${BUILD_NUMBER}
+        image: whoistimothyshandy/food-frontend:latest
 
         ports:
 
