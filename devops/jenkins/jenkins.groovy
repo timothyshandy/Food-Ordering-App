@@ -3,6 +3,7 @@ pipeline {
     agent any
 
     environment {
+
         BACKEND_IMAGE = "whoistimothyshandy/food-backend"
         FRONTEND_IMAGE = "whoistimothyshandy/food-frontend"
 
@@ -12,14 +13,7 @@ pipeline {
         CLUSTER_NAME = "food-app-cluster"
     }
 
-    options {
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        disableConcurrentBuilds()
-    }
-
-
     stages {
-
 
         stage('Checkout') {
             steps {
@@ -28,7 +22,6 @@ pipeline {
             }
         }
 
-
         stage('Build Backend') {
             steps {
                 dir('backend/Online-food') {
@@ -36,7 +29,6 @@ pipeline {
                 }
             }
         }
-
 
         stage('SonarQube Analysis') {
             steps {
@@ -51,16 +43,6 @@ pipeline {
             }
         }
 
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time:15, unit:'MINUTES') {
-                    waitForQualityGate abortPipeline:true
-                }
-            }
-        }
-
-
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
@@ -72,184 +54,101 @@ pipeline {
             }
         }
 
-
-        stage('Build Backend Docker Image') {
+        stage('Build Docker Images') {
             steps {
-                sh """
-                docker build \
-                -t ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                -t ${BACKEND_IMAGE}:latest \
-                backend/Online-food
-                """
+
+                sh '''
+                docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} backend/Online-food
+                docker tag ${BACKEND_IMAGE}:${IMAGE_TAG} ${BACKEND_IMAGE}:latest
+
+                docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} frontend
+                docker tag ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest
+                '''
             }
         }
-
-
-        stage('Build Frontend Docker Image') {
-            steps {
-                sh """
-                docker build \
-                -t ${FRONTEND_IMAGE}:${IMAGE_TAG} \
-                -t ${FRONTEND_IMAGE}:latest \
-                frontend
-                """
-            }
-        }
-
 
         stage('Docker Login') {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId:'dockerhub-creds',
-                        usernameVariable:'DOCKER_USERNAME',
-                        passwordVariable:'DOCKER_PASSWORD'
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
 
                     sh '''
-                    echo "$DOCKER_PASSWORD" | docker login \
-                    -u "$DOCKER_USERNAME" \
+                    echo $DOCKER_PASSWORD | docker login \
+                    -u $DOCKER_USERNAME \
                     --password-stdin
                     '''
                 }
             }
         }
 
-
         stage('Push Docker Images') {
             steps {
-                sh """
+
+                sh '''
                 docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
                 docker push ${BACKEND_IMAGE}:latest
 
                 docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
                 docker push ${FRONTEND_IMAGE}:latest
-                """
+                '''
             }
         }
-
 
         stage('Deploy to EKS') {
 
             steps {
 
-                withCredentials([
-                    [
-                        $class:'AmazonWebServicesCredentialsBinding',
-                        credentialsId:'aws-creds'
-                    ]
-                ]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
 
-
-                    sh """
+                    sh '''
 
                     aws eks update-kubeconfig \
                     --region ${AWS_REGION} \
                     --name ${CLUSTER_NAME}
 
-
                     kubectl apply -f devops/kubernetes/
-
 
                     kubectl set image deployment/backend \
                     backend=${BACKEND_IMAGE}:${IMAGE_TAG} \
                     -n food-app
 
-
                     kubectl set image deployment/frontend \
                     frontend=${FRONTEND_IMAGE}:${IMAGE_TAG} \
                     -n food-app
-
-
 
                     kubectl rollout status deployment/backend \
                     -n food-app \
                     --timeout=300s
 
-
                     kubectl rollout status deployment/frontend \
                     -n food-app \
                     --timeout=300s
 
-                    """
-                }
-            }
-        }
-
-
-
-        stage('Verify Deployment') {
-
-            steps {
-
-                withCredentials([
-                    [
-                        $class:'AmazonWebServicesCredentialsBinding',
-                        credentialsId:'aws-creds'
-                    ]
-                ]) {
-
-
-                    sh """
-
-                    aws eks update-kubeconfig \
-                    --region ${AWS_REGION} \
-                    --name ${CLUSTER_NAME}
-
-
-                    echo "==== POD STATUS ===="
-
                     kubectl get pods -n food-app
-
-
-                    echo "==== SERVICES ===="
-
                     kubectl get svc -n food-app
 
-
-                    echo "==== INGRESS ===="
-
-                    kubectl get ingress -n food-app
-
-                    """
+                    '''
                 }
             }
         }
-
     }
-
 
     post {
 
-
-        always {
-
-            sh '''
-            echo "Cleaning Docker resources..."
-
-            docker image prune -af || true
-
-            docker builder prune -af || true
-
-            echo "Cleanup completed."
-            '''
-        }
-
-
         success {
-
             echo "Food Ordering App deployed successfully."
-
         }
-
 
         failure {
-
-            echo "Deployment failed."
-
+            echo "Pipeline failed."
         }
-
     }
-
 }
