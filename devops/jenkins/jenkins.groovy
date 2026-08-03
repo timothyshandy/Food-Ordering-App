@@ -150,15 +150,25 @@ pipeline {
         }
 
         stage('Verify Deployment') {
-            steps {
-                sh '''
-                kubectl get pods -n food-app
-                kubectl get svc -n food-app
-                kubectl get ingress -n food-app
-                '''
-            }
+    steps {
+        withCredentials([
+            [
+                $class: 'AmazonWebServicesCredentialsBinding',
+                credentialsId: 'aws-creds'
+            ]
+        ]) {
+            sh '''
+            aws eks update-kubeconfig \
+            --region ap-south-1 \
+            --name food-app-cluster
+
+            kubectl get pods -n food-app
+            kubectl get svc -n food-app
+            kubectl get ingress -n food-app
+            '''
         }
     }
+}
 
     post {
 
